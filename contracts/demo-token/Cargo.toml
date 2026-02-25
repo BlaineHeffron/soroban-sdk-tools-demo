@@ -1,0 +1,20 @@
+[package]
+name = "demo-token"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+soroban-sdk-tools = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+soroban-sdk-tools = { workspace = true, features = ["testutils"] }
+
+[package.metadata.stellar]
+cargo_inherit = true
