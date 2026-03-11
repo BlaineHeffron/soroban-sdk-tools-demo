@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>soroban-sdk-tools walkthrough</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b6e4f'/%3E%3Cpath d='M18 20h28v6H18zm0 9h28v6H18zm0 9h18v6H18z' fill='%23fff'/%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --bg: #f3efe7;
+        --panel: #fffdf8;
+        --ink: #1f1c18;
+        --muted: #6f675f;
+        --line: #d6cec2;
+        --accent: #0b6e4f;
+        --accent-soft: #e3f2eb;
+        --manual: #f8e3dc;
+        --tools: #e2f0e8;
+        --gen: #e4eef9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+        background:
+          radial-gradient(circle at top left, rgba(11, 110, 79, 0.08), transparent 28%),
+          linear-gradient(180deg, #f7f3ec 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+
+      .page {
+        width: min(1500px, calc(100vw - 32px));
+        margin: 24px auto 48px;
+      }
+
+      .hero {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 28px 32px;
+        box-shadow: 0 14px 40px rgba(31, 28, 24, 0.06);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .hero h1 {
+        font-size: clamp(30px, 5vw, 52px);
+        line-height: 0.95;
+        margin-bottom: 12px;
+      }
+
+      .hero p {
+        max-width: 78ch;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.45;
+      }
+
+      .notes {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .chip {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border: 1px solid rgba(11, 110, 79, 0.18);
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .section {
+        margin-top: 22px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 14px 40px rgba(31, 28, 24, 0.06);
+      }
+
+      .section-head {
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(90deg, rgba(11, 110, 79, 0.06), transparent 65%);
+      }
+
+      .section-head h2 {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+
+      .section-head p {
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .cols {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+      }
+
+      .cols-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        min-width: 0;
+        border-right: 1px solid var(--line);
+      }
+
+      .card:last-child {
+        border-right: 0;
+      }
+
+      .card-head {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .card-head h3 {
+        font-size: 15px;
+        margin-bottom: 4px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .card-head p {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .manual .card-head {
+        background: var(--manual);
+      }
+
+      .tools .card-head {
+        background: var(--tools);
+      }
+
+      .generated .card-head {
+        background: var(--gen);
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.45;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: #fffdfa;
+      }
+
+      code {
+        white-space: pre;
+      }
+
+      .single {
+        border-top: 1px solid var(--line);
+      }
+
+      .single:first-of-type {
+        border-top: 0;
+      }
+
+      .single .card {
+        border-right: 0;
+      }
+
+      @media (max-width: 1500px) {
+        .cols-3 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cols-3 .card:last-child {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 1100px) {
+        .cols,
+        .cols-3 {
+          grid-template-columns: 1fr;
+        }
+
+        .card {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .card:last-child {
+          border-bottom: 0;
+        }
+
+        .cols-3 .card:last-child {
+          grid-column: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .page {
+          width: 100%;
+          margin: 0;
+        }
+
+        .hero,
+        .section {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>soroban-sdk-tools walkthrough</h1>
+        <p>
+          One scrollable file for the demo. Each section matches a beat in
+          <code>SCRIPT.md</code>, with the manual SDK version next to the
+          macro-based version and the generated TypeScript where it matters.
+          Open this in a browser, zoom to taste, and print to PDF if you want a
+          static copy.
+        </p>
+        <div class="notes">
+          <div class="chip">manual-token vs demo-token</div>
+          <div class="chip">AuthClient and real signatures</div>
+          <div class="chip">vault error flattening into TypeScript</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>1. Storage schema</h2>
+          <p>
+            Start with the raw storage keys on the left and the six-line storage
+            struct on the right. This sets up the rest of the comparison.
+          </p>
+        </div>
+        <div class="cols">
+          <article class="card manual">
+            <div class="card-head">
+              <h3>Manual SDK</h3>
+              <p>contracts/manual-token/src/lib.rs:14-21</p>
+            </div>
+            <pre><code>#[derive(Clone)]
+#[contracttype]
+pub enum DataKey {
+    Admin,
+    Balance(Address),
+    Allowance(Address, Address),
+    TotalSupply,
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>soroban-sdk-tools</h3>
+              <p>contracts/demo-token/src/lib.rs:17-23</p>
+            </div>
+            <pre><code>#[contractstorage(auto_shorten = true)]
+pub struct TokenStorage {
+    admin: InstanceItem&lt;Address&gt;,
+    balances: PersistentMap&lt;Address, i128&gt;,
+    allowances: PersistentMap&lt;(Address, Address), i128&gt;,
+    total_supply: InstanceItem&lt;i128&gt;,
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>2. Mint path</h2>
+          <p>
+            Use this when talking through the repeated get/set pattern versus
+            the generated update helpers.
+          </p>
+        </div>
+        <div class="cols">
+          <article class="card manual">
+            <div class="card-head">
+              <h3>Manual SDK</h3>
+              <p>contracts/manual-token/src/lib.rs:57-78</p>
+            </div>
+            <pre><code>pub fn mint(env: &amp;Env, to: &amp;Address, amount: i128) -&gt; Result&lt;(), TokenError&gt; {
+    let admin: Address = env
+        .storage()
+        .instance()
+        .get(&amp;DataKey::Admin)
+        .ok_or(TokenError::NotInitialized)?;
+    admin.require_auth();
+
+    if amount &lt;= 0 {
+        return Err(TokenError::InvalidAmount);
+    }
+
+    let key = DataKey::Balance(to.clone());
+    let balance: i128 = env.storage().persistent().get(&amp;key).unwrap_or(0);
+    env.storage().persistent().set(&amp;key, &amp;(balance + amount));
+    env.storage().persistent().extend_ttl(&amp;key, 50, 100);
+
+    let supply_key = DataKey::TotalSupply;
+    let supply: i128 = env.storage().instance().get(&amp;supply_key).unwrap_or(0);
+    env.storage().instance().set(&amp;supply_key, &amp;(supply + amount));
+
+    Ok(())
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>soroban-sdk-tools</h3>
+              <p>contracts/demo-token/src/lib.rs:62-74</p>
+            </div>
+            <pre><code>pub fn mint(env: &amp;Env, to: &amp;Address, amount: i128) -&gt; Result&lt;(), TokenError&gt; {
+    let admin = TokenStorage::get_admin(env).ok_or(TokenError::NotInitialized)?;
+    admin.require_auth();
+
+    if amount &lt;= 0 {
+        return Err(TokenError::InvalidAmount);
+    }
+
+    TokenStorage::update_balances(env, to, |bal| bal.unwrap_or(0) + amount);
+    TokenStorage::update_total_supply(env, |s| s.unwrap_or(0) + amount);
+    TokenStorage::extend_balances_ttl(env, to, 50, 100);
+    Ok(())
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>3. Transfer path</h2>
+          <p>
+            This is the cleanest side-by-side for the repeated key construction
+            pattern.
+          </p>
+        </div>
+        <div class="cols">
+          <article class="card manual">
+            <div class="card-head">
+              <h3>Manual SDK</h3>
+              <p>contracts/manual-token/src/lib.rs:81-104</p>
+            </div>
+            <pre><code>pub fn transfer(
+    env: &amp;Env,
+    from: &amp;Address,
+    to: &amp;Address,
+    amount: i128,
+) -&gt; Result&lt;(), TokenError&gt; {
+    from.require_auth();
+
+    if amount &lt;= 0 {
+        return Err(TokenError::InvalidAmount);
+    }
+
+    let from_key = DataKey::Balance(from.clone());
+    let from_bal: i128 = env.storage().persistent().get(&amp;from_key).unwrap_or(0);
+    if from_bal &lt; amount {
+        return Err(TokenError::InsufficientBalance);
+    }
+    env.storage().persistent().set(&amp;from_key, &amp;(from_bal - amount));
+
+    let to_key = DataKey::Balance(to.clone());
+    let to_bal: i128 = env.storage().persistent().get(&amp;to_key).unwrap_or(0);
+    env.storage().persistent().set(&amp;to_key, &amp;(to_bal + amount));
+
+    Ok(())
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>soroban-sdk-tools</h3>
+              <p>contracts/demo-token/src/lib.rs:77-96</p>
+            </div>
+            <pre><code>pub fn transfer(
+    env: &amp;Env,
+    from: &amp;Address,
+    to: &amp;Address,
+    amount: i128,
+) -&gt; Result&lt;(), TokenError&gt; {
+    from.require_auth();
+
+    if amount &lt;= 0 {
+        return Err(TokenError::InvalidAmount);
+    }
+
+    let from_bal = TokenStorage::get_balances(env, from).unwrap_or(0);
+    if from_bal &lt; amount {
+        return Err(TokenError::InsufficientBalance);
+    }
+
+    TokenStorage::set_balances(env, from, &amp;(from_bal - amount));
+    TokenStorage::update_balances(env, to, |bal| bal.unwrap_or(0) + amount);
+    Ok(())
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>4. Error definitions and generated client view</h2>
+          <p>
+            Show the manual enum, the macro enum, then the generated
+            TypeScript error map with the descriptions carried over.
+          </p>
+        </div>
+        <div class="cols-3">
+          <article class="card manual">
+            <div class="card-head">
+              <h3>Manual SDK</h3>
+              <p>contracts/manual-token/src/lib.rs:27-35</p>
+            </div>
+            <pre><code>#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum TokenError {
+    AlreadyInitialized = 1,
+    NotInitialized = 2,
+    InsufficientBalance = 3,
+    InsufficientAllowance = 4,
+    InvalidAmount = 5,
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>soroban-sdk-tools</h3>
+              <p>contracts/demo-token/src/lib.rs:29-40</p>
+            </div>
+            <pre><code>#[scerr]
+pub enum TokenError {
+    /// already initialized
+    AlreadyInitialized,
+    /// not initialized
+    NotInitialized,
+    /// insufficient balance
+    InsufficientBalance,
+    /// insufficient allowance
+    InsufficientAllowance,
+    /// amount must be positive
+    InvalidAmount,
+}</code></pre>
+          </article>
+          <article class="card generated">
+            <div class="card-head">
+              <h3>Generated TypeScript</h3>
+              <p>bindings/demo-token/src/index.ts:36-57</p>
+            </div>
+            <pre><code>export const TokenError = {
+  /**
+   * already initialized
+   */
+  1: {message:"AlreadyInitialized"},
+  /**
+   * not initialized
+   */
+  2: {message:"NotInitialized"},
+  /**
+   * insufficient balance
+   */
+  3: {message:"InsufficientBalance"},
+  /**
+   * insufficient allowance
+   */
+  4: {message:"InsufficientAllowance"},
+  /**
+   * amount must be positive
+   */
+  5: {message:"InvalidAmount"}
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>5. Auth testing: manual mock auth vs AuthClient</h2>
+          <p>
+            Use this when switching from the manual test file to the generated
+            auth builder.
+          </p>
+        </div>
+        <div class="cols">
+          <article class="card manual">
+            <div class="card-head">
+              <h3>Manual SDK</h3>
+              <p>contracts/manual-token/src/test.rs:91-119</p>
+            </div>
+            <pre><code>#[test]
+fn test_transfer_with_manual_mock_auth() {
+    let env = Env::default();
+    let contract_id = env.register(ManualToken, ());
+    let client = ManualTokenClient::new(&amp;env, &amp;contract_id);
+    let admin = Address::generate(&amp;env);
+    let alice = Address::generate(&amp;env);
+    let bob = Address::generate(&amp;env);
+
+    env.mock_all_auths();
+    client.initialize(&amp;admin);
+    client.mint(&amp;alice, &amp;1000);
+
+    env.mock_auths(&amp;[MockAuth {
+        address: &amp;alice,
+        invoke: &amp;MockAuthInvoke {
+            contract: &amp;contract_id,
+            fn_name: "transfer",
+            args: (alice.clone(), bob.clone(), 300i128).into_val(&amp;env),
+            sub_invokes: &amp;[],
+        },
+    }]);
+
+    client.transfer(&amp;alice, &amp;bob, &amp;300);
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>soroban-sdk-tools</h3>
+              <p>contracts/demo-token/src/test.rs:98-118</p>
+            </div>
+            <pre><code>#[test]
+fn test_transfer_with_auth_client() {
+    let env = Env::default();
+    let contract_id = env.register(token::WASM, ());
+    let admin = Address::generate(&amp;env);
+    let alice = Address::generate(&amp;env);
+    let bob = Address::generate(&amp;env);
+
+    env.mock_all_auths();
+    let client = token::Client::new(&amp;env, &amp;contract_id);
+    client.initialize(&amp;admin);
+    client.mint(&amp;alice, &amp;1000);
+
+    let auth = token::AuthClient::new(&amp;env, &amp;contract_id);
+    auth.transfer(&amp;alice, &amp;bob, &amp;300).authorize(&amp;alice).invoke();
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>6. Real signature tests</h2>
+          <p>
+            Keep these short. They are the payoff for the auth story: real
+            ed25519 and passkey signatures in a few lines.
+          </p>
+        </div>
+        <div class="cols">
+          <article class="card tools">
+            <div class="card-head">
+              <h3>ed25519</h3>
+              <p>contracts/demo-token/src/test.rs:124-145</p>
+            </div>
+            <pre><code>#[test]
+fn test_transfer_with_ed25519_signature() {
+    let env = Env::default();
+    let contract_id = env.register(token::WASM, ());
+    let admin = Address::generate(&amp;env);
+    let bob = Address::generate(&amp;env);
+
+    let kp = Keypair::random(&amp;env);
+    let alice = kp.address().clone();
+
+    env.mock_all_auths();
+    let client = token::Client::new(&amp;env, &amp;contract_id);
+    client.initialize(&amp;admin);
+    client.mint(&amp;alice, &amp;1000);
+
+    let auth = token::AuthClient::new(&amp;env, &amp;contract_id);
+    auth.transfer(&amp;alice, &amp;bob, &amp;300).sign(&amp;kp).invoke();
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>Passkey / secp256r1</h3>
+              <p>contracts/demo-token/src/test.rs:148-169</p>
+            </div>
+            <pre><code>#[test]
+fn test_transfer_with_passkey_signature() {
+    let env = Env::default();
+    let contract_id = env.register(token::WASM, ());
+    let admin = Address::generate(&amp;env);
+    let bob = Address::generate(&amp;env);
+
+    let kp = Secp256r1Keypair::random(&amp;env);
+    let signer_addr = kp.address().clone();
+
+    env.mock_all_auths();
+    let client = token::Client::new(&amp;env, &amp;contract_id);
+    client.initialize(&amp;admin);
+    client.mint(&amp;signer_addr, &amp;1000);
+
+    let auth = token::AuthClient::new(&amp;env, &amp;contract_id);
+    auth.transfer(&amp;signer_addr, &amp;bob, &amp;500)
+        .sign(&amp;kp)
+        .invoke();
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>7. Cross-contract error composition</h2>
+          <p>
+            Show the vault enum, then the `??` call site, then the flattened
+            TypeScript output. This is the cleanest proof that the WASM spec is
+            usable by clients.
+          </p>
+        </div>
+        <div class="cols-3">
+          <article class="card tools">
+            <div class="card-head">
+              <h3>VaultError</h3>
+              <p>contracts/demo-vault/src/lib.rs:36-50</p>
+            </div>
+            <pre><code>#[scerr]
+pub enum VaultError {
+    /// vault already initialized
+    AlreadyInitialized,
+    /// vault not initialized
+    NotInitialized,
+    /// deposit amount must be positive
+    InvalidAmount,
+    /// withdrawal exceeds deposit
+    InsufficientDeposit,
+
+    #[from_contract_client]
+    Token(token::TokenError),
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>deposit()</h3>
+              <p>contracts/demo-vault/src/lib.rs:76-94</p>
+            </div>
+            <pre><code>pub fn deposit(env: &amp;Env, user: &amp;Address, amount: i128) -&gt; Result&lt;(), VaultError&gt; {
+    user.require_auth();
+
+    if amount &lt;= 0 {
+        return Err(VaultError::InvalidAmount);
+    }
+
+    let token_id = VaultStorage::get_token_id(env).ok_or(VaultError::NotInitialized)?;
+    let vault_addr = env.current_contract_address();
+
+    token::Client::new(env, &amp;token_id)
+        .try_transfer_from(&amp;vault_addr, user, &amp;vault_addr, &amp;amount)??;
+
+    VaultStorage::update_deposits(env, user, |d| d.unwrap_or(0) + amount);
+    VaultStorage::update_total_deposited(env, |t| t.unwrap_or(0) + amount);
+    Ok(())
+}</code></pre>
+          </article>
+          <article class="card generated">
+            <div class="card-head">
+              <h3>Generated TypeScript</h3>
+              <p>bindings/demo-vault/src/index.ts:36-80</p>
+            </div>
+            <pre><code>export const VaultError = {
+  1: {message:"AlreadyInitialized"},
+  2: {message:"NotInitialized"},
+  3: {message:"InvalidAmount"},
+  4: {message:"InsufficientDeposit"},
+  5: {message:"Token_AlreadyInitialized"},
+  6: {message:"Token_NotInitialized"},
+  7: {message:"Token_InsufficientBalance"},
+  8: {message:"Token_InsufficientAllowance"},
+  9: {message:"Token_InvalidAmount"},
+  0: {message:"Aborted"},
+  2147483647: {message:"UnknownError"}
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section single">
+        <div class="section-head">
+          <h2>8. Generated client surface</h2>
+          <p>
+            If you want one last shot showing that method names and parameter
+            types are already there for the frontend side, use this block.
+          </p>
+        </div>
+        <div class="cols">
+          <article class="card generated">
+            <div class="card-head">
+              <h3>TypeScript client</h3>
+              <p>bindings/demo-token/src/index.ts:59-99</p>
+            </div>
+            <pre><code>export interface Client {
+  initialize: ({admin}: {admin: string}, options?: MethodOptions)
+    =&gt; Promise&lt;AssembledTransaction&lt;Result&lt;void&gt;&gt;&gt;
+
+  mint: ({to, amount}: {to: string, amount: i128}, options?: MethodOptions)
+    =&gt; Promise&lt;AssembledTransaction&lt;Result&lt;void&gt;&gt;&gt;
+
+  transfer: ({from, to, amount}: {from: string, to: string, amount: i128}, options?: MethodOptions)
+    =&gt; Promise&lt;AssembledTransaction&lt;Result&lt;void&gt;&gt;&gt;
+
+  approve: ({owner, spender, amount}: {owner: string, spender: string, amount: i128}, options?: MethodOptions)
+    =&gt; Promise&lt;AssembledTransaction&lt;Result&lt;void&gt;&gt;&gt;
+
+  transfer_from: ({spender, from, to, amount}: {spender: string, from: string, to: string, amount: i128}, options?: MethodOptions)
+    =&gt; Promise&lt;AssembledTransaction&lt;Result&lt;void&gt;&gt;&gt;
+
+  balance: ({addr}: {addr: string}, options?: MethodOptions)
+    =&gt; Promise&lt;AssembledTransaction&lt;i128&gt;&gt;
+}</code></pre>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

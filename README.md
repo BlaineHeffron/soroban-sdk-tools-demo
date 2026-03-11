@@ -16,11 +16,19 @@ cargo build --release --target wasm32v1-none -p demo-token
 cargo build --release --target wasm32v1-none -p demo-vault
 ```
 
+Generate the checked-in TypeScript bindings:
+
+```sh
+./scripts/generate-bindings.sh
+```
+
 Run everything:
 
 ```sh
 cargo test
 ```
+
+The generated bindings live in `bindings/demo-token/src/index.ts` and `bindings/demo-vault/src/index.ts`.
 
 ## Video walkthrough
 
@@ -202,6 +210,8 @@ pub enum TokenError {
 ```
 
 `#[scerr]` generates a `#[contracterror]` enum with sequential error codes (1, 2, 3...) and wires up the doc comments as descriptions. You don't assign the numbers yourself.
+
+If you want to show how that lands in client code, open `bindings/demo-token/src/index.ts`: the generated `TokenError` map is already checked in.
 
 The rest of the contract is just normal Rust -- `?` operator, `Result<(), TokenError>` returns.
 
