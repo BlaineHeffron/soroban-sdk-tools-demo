@@ -239,11 +239,8 @@
       <section class="hero">
         <h1>soroban-sdk-tools walkthrough</h1>
         <p>
-          One scrollable file for the demo. Each section matches a beat in
-          <code>SCRIPT.md</code>, with the manual SDK version next to the
-          macro-based version and the generated TypeScript where it matters.
-          Open this in a browser, zoom to taste, and print to PDF if you want a
-          static copy.
+          Manual and macro-based Soroban contract examples, with generated
+          TypeScript bindings for the client-facing pieces.
         </p>
         <div class="notes">
           <div class="chip">manual-token vs demo-token</div>
@@ -255,10 +252,7 @@
       <section class="section">
         <div class="section-head">
           <h2>1. Storage schema</h2>
-          <p>
-            Start with the raw storage keys on the left and the six-line storage
-            struct on the right. This sets up the rest of the comparison.
-          </p>
+          <p>Manual storage keys and macro-based storage schema.</p>
         </div>
         <div class="cols">
           <article class="card manual">
@@ -294,10 +288,7 @@ pub struct TokenStorage {
       <section class="section">
         <div class="section-head">
           <h2>2. Mint path</h2>
-          <p>
-            Use this when talking through the repeated get/set pattern versus
-            the generated update helpers.
-          </p>
+          <p>Mint implementation.</p>
         </div>
         <div class="cols">
           <article class="card manual">
@@ -354,10 +345,7 @@ pub struct TokenStorage {
       <section class="section">
         <div class="section-head">
           <h2>3. Transfer path</h2>
-          <p>
-            This is the cleanest side-by-side for the repeated key construction
-            pattern.
-          </p>
+          <p>Transfer implementation.</p>
         </div>
         <div class="cols">
           <article class="card manual">
@@ -424,10 +412,7 @@ pub struct TokenStorage {
       <section class="section">
         <div class="section-head">
           <h2>4. Error definitions and generated client view</h2>
-          <p>
-            Show the manual enum, the macro enum, then the generated
-            TypeScript error map with the descriptions carried over.
-          </p>
+          <p>Contract errors and generated TypeScript error map.</p>
         </div>
         <div class="cols-3">
           <article class="card manual">
@@ -499,10 +484,7 @@ pub enum TokenError {
       <section class="section">
         <div class="section-head">
           <h2>5. Auth testing: manual mock auth vs AuthClient</h2>
-          <p>
-            Use this when switching from the manual test file to the generated
-            auth builder.
-          </p>
+          <p>Manual mock auth compared with AuthClient.</p>
         </div>
         <div class="cols">
           <article class="card manual">
@@ -564,10 +546,7 @@ fn test_transfer_with_auth_client() {
       <section class="section">
         <div class="section-head">
           <h2>6. Real signature tests</h2>
-          <p>
-            Keep these short. They are the payoff for the auth story: real
-            ed25519 and passkey signatures in a few lines.
-          </p>
+          <p>ed25519 and secp256r1 authorization tests.</p>
         </div>
         <div class="cols">
           <article class="card tools">
@@ -626,11 +605,7 @@ fn test_transfer_with_passkey_signature() {
       <section class="section">
         <div class="section-head">
           <h2>7. Cross-contract error composition</h2>
-          <p>
-            Show the vault enum, then the `??` call site, then the flattened
-            TypeScript output. This is the cleanest proof that the WASM spec is
-            usable by clients.
-          </p>
+          <p>Vault error composition and generated TypeScript output.</p>
         </div>
         <div class="cols-3">
           <article class="card tools">
@@ -701,10 +676,7 @@ pub enum VaultError {
       <section class="section single">
         <div class="section-head">
           <h2>8. Generated client surface</h2>
-          <p>
-            If you want one last shot showing that method names and parameter
-            types are already there for the frontend side, use this block.
-          </p>
+          <p>Generated TypeScript client interface.</p>
         </div>
         <div class="cols">
           <article class="card generated">
