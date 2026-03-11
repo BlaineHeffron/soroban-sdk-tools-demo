@@ -239,20 +239,20 @@
       <section class="hero">
         <h1>soroban-sdk-tools walkthrough</h1>
         <p>
-          Manual and macro-based Soroban contract examples, with generated
-          TypeScript bindings for the client-facing pieces.
+          Error handling, authorization flows, and generated TypeScript
+          bindings, with a short storage recap up front.
         </p>
         <div class="notes">
-          <div class="chip">manual-token vs demo-token</div>
+          <div class="chip">error enums and flattened specs</div>
           <div class="chip">AuthClient and real signatures</div>
-          <div class="chip">vault error flattening into TypeScript</div>
+          <div class="chip">cross-contract errors in TypeScript</div>
         </div>
       </section>
 
       <section class="section">
         <div class="section-head">
-          <h2>1. Storage schema</h2>
-          <p>Manual storage keys and macro-based storage schema.</p>
+          <h2>1. Storage recap</h2>
+          <p>Short reminder from tranche 1: manual keys vs macro storage.</p>
         </div>
         <div class="cols">
           <article class="card manual">
@@ -287,8 +287,8 @@ pub struct TokenStorage {
 
       <section class="section">
         <div class="section-head">
-          <h2>2. Mint path</h2>
-          <p>Mint implementation.</p>
+          <h2>2. Storage example</h2>
+          <p>One quick example before moving on to errors and auth.</p>
         </div>
         <div class="cols">
           <article class="card manual">
@@ -344,75 +344,8 @@ pub struct TokenStorage {
 
       <section class="section">
         <div class="section-head">
-          <h2>3. Transfer path</h2>
-          <p>Transfer implementation.</p>
-        </div>
-        <div class="cols">
-          <article class="card manual">
-            <div class="card-head">
-              <h3>Manual SDK</h3>
-              <p>contracts/manual-token/src/lib.rs:81-104</p>
-            </div>
-            <pre><code>pub fn transfer(
-    env: &amp;Env,
-    from: &amp;Address,
-    to: &amp;Address,
-    amount: i128,
-) -&gt; Result&lt;(), TokenError&gt; {
-    from.require_auth();
-
-    if amount &lt;= 0 {
-        return Err(TokenError::InvalidAmount);
-    }
-
-    let from_key = DataKey::Balance(from.clone());
-    let from_bal: i128 = env.storage().persistent().get(&amp;from_key).unwrap_or(0);
-    if from_bal &lt; amount {
-        return Err(TokenError::InsufficientBalance);
-    }
-    env.storage().persistent().set(&amp;from_key, &amp;(from_bal - amount));
-
-    let to_key = DataKey::Balance(to.clone());
-    let to_bal: i128 = env.storage().persistent().get(&amp;to_key).unwrap_or(0);
-    env.storage().persistent().set(&amp;to_key, &amp;(to_bal + amount));
-
-    Ok(())
-}</code></pre>
-          </article>
-          <article class="card tools">
-            <div class="card-head">
-              <h3>soroban-sdk-tools</h3>
-              <p>contracts/demo-token/src/lib.rs:77-96</p>
-            </div>
-            <pre><code>pub fn transfer(
-    env: &amp;Env,
-    from: &amp;Address,
-    to: &amp;Address,
-    amount: i128,
-) -&gt; Result&lt;(), TokenError&gt; {
-    from.require_auth();
-
-    if amount &lt;= 0 {
-        return Err(TokenError::InvalidAmount);
-    }
-
-    let from_bal = TokenStorage::get_balances(env, from).unwrap_or(0);
-    if from_bal &lt; amount {
-        return Err(TokenError::InsufficientBalance);
-    }
-
-    TokenStorage::set_balances(env, from, &amp;(from_bal - amount));
-    TokenStorage::update_balances(env, to, |bal| bal.unwrap_or(0) + amount);
-    Ok(())
-}</code></pre>
-          </article>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-head">
-          <h2>4. Error definitions and generated client view</h2>
-          <p>Contract errors and generated TypeScript error map.</p>
+          <h2>3. Error definitions and generated client view</h2>
+          <p>Manual error enums, macro-generated errors, and generated TypeScript.</p>
         </div>
         <div class="cols-3">
           <article class="card manual">
@@ -483,8 +416,8 @@ pub enum TokenError {
 
       <section class="section">
         <div class="section-head">
-          <h2>5. Auth testing: manual mock auth vs AuthClient</h2>
-          <p>Manual mock auth compared with AuthClient.</p>
+          <h2>4. Auth testing: manual mock auth vs AuthClient</h2>
+          <p>Targeted authorization with manual setup compared with AuthClient.</p>
         </div>
         <div class="cols">
           <article class="card manual">
@@ -545,8 +478,8 @@ fn test_transfer_with_auth_client() {
 
       <section class="section">
         <div class="section-head">
-          <h2>6. Real signature tests</h2>
-          <p>ed25519 and secp256r1 authorization tests.</p>
+          <h2>5. Real signature tests</h2>
+          <p>ed25519 and secp256r1 flows with real signatures.</p>
         </div>
         <div class="cols">
           <article class="card tools">
@@ -604,8 +537,8 @@ fn test_transfer_with_passkey_signature() {
 
       <section class="section">
         <div class="section-head">
-          <h2>7. Cross-contract error composition</h2>
-          <p>Vault error composition and generated TypeScript output.</p>
+          <h2>6. Cross-contract error composition</h2>
+          <p>Vault error composition and flattened TypeScript output.</p>
         </div>
         <div class="cols-3">
           <article class="card tools">
@@ -675,8 +608,8 @@ pub enum VaultError {
 
       <section class="section single">
         <div class="section-head">
-          <h2>8. Generated client surface</h2>
-          <p>Generated TypeScript client interface.</p>
+          <h2>7. Generated client surface</h2>
+          <p>Generated TypeScript contract interface.</p>
         </div>
         <div class="cols">
           <article class="card generated">
