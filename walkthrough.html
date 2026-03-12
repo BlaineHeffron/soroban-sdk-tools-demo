@@ -240,111 +240,19 @@
         <h1>soroban-sdk-tools walkthrough</h1>
         <p>
           Error handling, authorization flows, and generated TypeScript
-          bindings, with a short storage recap up front.
+          bindings.
         </p>
         <div class="notes">
+          <div class="chip">scerr and transparent propagation</div>
           <div class="chip">error enums and flattened specs</div>
-          <div class="chip">AuthClient and real signatures</div>
           <div class="chip">cross-contract errors in TypeScript</div>
+          <div class="chip">AuthClient and real signatures</div>
         </div>
       </section>
 
       <section class="section">
         <div class="section-head">
-          <h2>1. Storage recap</h2>
-          <p>Short reminder from tranche 1: manual keys vs macro storage.</p>
-        </div>
-        <div class="cols">
-          <article class="card manual">
-            <div class="card-head">
-              <h3>Manual SDK</h3>
-              <p>contracts/manual-token/src/lib.rs:14-21</p>
-            </div>
-            <pre><code>#[derive(Clone)]
-#[contracttype]
-pub enum DataKey {
-    Admin,
-    Balance(Address),
-    Allowance(Address, Address),
-    TotalSupply,
-}</code></pre>
-          </article>
-          <article class="card tools">
-            <div class="card-head">
-              <h3>soroban-sdk-tools</h3>
-              <p>contracts/demo-token/src/lib.rs:17-23</p>
-            </div>
-            <pre><code>#[contractstorage(auto_shorten = true)]
-pub struct TokenStorage {
-    admin: InstanceItem&lt;Address&gt;,
-    balances: PersistentMap&lt;Address, i128&gt;,
-    allowances: PersistentMap&lt;(Address, Address), i128&gt;,
-    total_supply: InstanceItem&lt;i128&gt;,
-}</code></pre>
-          </article>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-head">
-          <h2>2. Storage example</h2>
-          <p>One quick example before moving on to errors and auth.</p>
-        </div>
-        <div class="cols">
-          <article class="card manual">
-            <div class="card-head">
-              <h3>Manual SDK</h3>
-              <p>contracts/manual-token/src/lib.rs:57-78</p>
-            </div>
-            <pre><code>pub fn mint(env: &amp;Env, to: &amp;Address, amount: i128) -&gt; Result&lt;(), TokenError&gt; {
-    let admin: Address = env
-        .storage()
-        .instance()
-        .get(&amp;DataKey::Admin)
-        .ok_or(TokenError::NotInitialized)?;
-    admin.require_auth();
-
-    if amount &lt;= 0 {
-        return Err(TokenError::InvalidAmount);
-    }
-
-    let key = DataKey::Balance(to.clone());
-    let balance: i128 = env.storage().persistent().get(&amp;key).unwrap_or(0);
-    env.storage().persistent().set(&amp;key, &amp;(balance + amount));
-    env.storage().persistent().extend_ttl(&amp;key, 50, 100);
-
-    let supply_key = DataKey::TotalSupply;
-    let supply: i128 = env.storage().instance().get(&amp;supply_key).unwrap_or(0);
-    env.storage().instance().set(&amp;supply_key, &amp;(supply + amount));
-
-    Ok(())
-}</code></pre>
-          </article>
-          <article class="card tools">
-            <div class="card-head">
-              <h3>soroban-sdk-tools</h3>
-              <p>contracts/demo-token/src/lib.rs:62-74</p>
-            </div>
-            <pre><code>pub fn mint(env: &amp;Env, to: &amp;Address, amount: i128) -&gt; Result&lt;(), TokenError&gt; {
-    let admin = TokenStorage::get_admin(env).ok_or(TokenError::NotInitialized)?;
-    admin.require_auth();
-
-    if amount &lt;= 0 {
-        return Err(TokenError::InvalidAmount);
-    }
-
-    TokenStorage::update_balances(env, to, |bal| bal.unwrap_or(0) + amount);
-    TokenStorage::update_total_supply(env, |s| s.unwrap_or(0) + amount);
-    TokenStorage::extend_balances_ttl(env, to, 50, 100);
-    Ok(())
-}</code></pre>
-          </article>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-head">
-          <h2>3. Error definitions and generated client view</h2>
+          <h2>1. Error definitions and generated client view</h2>
           <p>Manual error enums, macro-generated errors, and generated TypeScript.</p>
         </div>
         <div class="cols-3">
@@ -409,6 +317,118 @@ pub enum TokenError {
    * amount must be positive
    */
   5: {message:"InvalidAmount"}
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>2. Transparent propagation</h2>
+          <p>Direct error wrapping with #[transparent] next to remote error wrapping.</p>
+        </div>
+        <div class="cols">
+          <article class="card tools">
+            <div class="card-head">
+              <h3>Mixed error enum</h3>
+              <p>soroban-sdk-tools integration tests</p>
+            </div>
+            <pre><code>#[scerr]
+pub enum MixedError {
+    InvalidInput,
+
+    #[transparent]
+    MathDirect(#[from] MathError),
+
+    #[from_contract_client]
+    MathRemote(MathError),
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>Direct vs remote use</h3>
+              <p>soroban-sdk-tools integration tests</p>
+            </div>
+            <pre><code>pub fn direct_div(num: i64, denom: i64) -> Result&lt;i64, MixedError&gt; {
+    Math::safe_div(num, denom)?;
+    Ok(num / denom)
+}
+
+pub fn remote_div(env: Env, math_id: Address, num: i64, denom: i64) -> Result&lt;i64, MixedError&gt; {
+    let client = MathClient::new(&env, &math_id);
+    client.try_safe_div(&num, &denom)??;
+    Ok(num / denom)
+}</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>3. Cross-contract error composition</h2>
+          <p>Vault error composition and flattened TypeScript output.</p>
+        </div>
+        <div class="cols-3">
+          <article class="card tools">
+            <div class="card-head">
+              <h3>VaultError</h3>
+              <p>contracts/demo-vault/src/lib.rs:36-50</p>
+            </div>
+            <pre><code>#[scerr]
+pub enum VaultError {
+    /// vault already initialized
+    AlreadyInitialized,
+    /// vault not initialized
+    NotInitialized,
+    /// deposit amount must be positive
+    InvalidAmount,
+    /// withdrawal exceeds deposit
+    InsufficientDeposit,
+
+    #[from_contract_client]
+    Token(token::TokenError),
+}</code></pre>
+          </article>
+          <article class="card tools">
+            <div class="card-head">
+              <h3>deposit()</h3>
+              <p>contracts/demo-vault/src/lib.rs:76-94</p>
+            </div>
+            <pre><code>pub fn deposit(env: &amp;Env, user: &amp;Address, amount: i128) -&gt; Result&lt;(), VaultError&gt; {
+    user.require_auth();
+
+    if amount &lt;= 0 {
+        return Err(VaultError::InvalidAmount);
+    }
+
+    let token_id = VaultStorage::get_token_id(env).ok_or(VaultError::NotInitialized)?;
+    let vault_addr = env.current_contract_address();
+
+    token::Client::new(env, &amp;token_id)
+        .try_transfer_from(&amp;vault_addr, user, &amp;vault_addr, &amp;amount)??;
+
+    VaultStorage::update_deposits(env, user, |d| d.unwrap_or(0) + amount);
+    VaultStorage::update_total_deposited(env, |t| t.unwrap_or(0) + amount);
+    Ok(())
+}</code></pre>
+          </article>
+          <article class="card generated">
+            <div class="card-head">
+              <h3>Generated TypeScript</h3>
+              <p>bindings/demo-vault/src/index.ts:36-80</p>
+            </div>
+            <pre><code>export const VaultError = {
+  1: {message:"AlreadyInitialized"},
+  2: {message:"NotInitialized"},
+  3: {message:"InvalidAmount"},
+  4: {message:"InsufficientDeposit"},
+  5: {message:"Token_AlreadyInitialized"},
+  6: {message:"Token_NotInitialized"},
+  7: {message:"Token_InsufficientBalance"},
+  8: {message:"Token_InsufficientAllowance"},
+  9: {message:"Token_InvalidAmount"},
+  0: {message:"Aborted"},
+  2147483647: {message:"UnknownError"}
 }</code></pre>
           </article>
         </div>
@@ -535,80 +555,9 @@ fn test_transfer_with_passkey_signature() {
         </div>
       </section>
 
-      <section class="section">
-        <div class="section-head">
-          <h2>6. Cross-contract error composition</h2>
-          <p>Vault error composition and flattened TypeScript output.</p>
-        </div>
-        <div class="cols-3">
-          <article class="card tools">
-            <div class="card-head">
-              <h3>VaultError</h3>
-              <p>contracts/demo-vault/src/lib.rs:36-50</p>
-            </div>
-            <pre><code>#[scerr]
-pub enum VaultError {
-    /// vault already initialized
-    AlreadyInitialized,
-    /// vault not initialized
-    NotInitialized,
-    /// deposit amount must be positive
-    InvalidAmount,
-    /// withdrawal exceeds deposit
-    InsufficientDeposit,
-
-    #[from_contract_client]
-    Token(token::TokenError),
-}</code></pre>
-          </article>
-          <article class="card tools">
-            <div class="card-head">
-              <h3>deposit()</h3>
-              <p>contracts/demo-vault/src/lib.rs:76-94</p>
-            </div>
-            <pre><code>pub fn deposit(env: &amp;Env, user: &amp;Address, amount: i128) -&gt; Result&lt;(), VaultError&gt; {
-    user.require_auth();
-
-    if amount &lt;= 0 {
-        return Err(VaultError::InvalidAmount);
-    }
-
-    let token_id = VaultStorage::get_token_id(env).ok_or(VaultError::NotInitialized)?;
-    let vault_addr = env.current_contract_address();
-
-    token::Client::new(env, &amp;token_id)
-        .try_transfer_from(&amp;vault_addr, user, &amp;vault_addr, &amp;amount)??;
-
-    VaultStorage::update_deposits(env, user, |d| d.unwrap_or(0) + amount);
-    VaultStorage::update_total_deposited(env, |t| t.unwrap_or(0) + amount);
-    Ok(())
-}</code></pre>
-          </article>
-          <article class="card generated">
-            <div class="card-head">
-              <h3>Generated TypeScript</h3>
-              <p>bindings/demo-vault/src/index.ts:36-80</p>
-            </div>
-            <pre><code>export const VaultError = {
-  1: {message:"AlreadyInitialized"},
-  2: {message:"NotInitialized"},
-  3: {message:"InvalidAmount"},
-  4: {message:"InsufficientDeposit"},
-  5: {message:"Token_AlreadyInitialized"},
-  6: {message:"Token_NotInitialized"},
-  7: {message:"Token_InsufficientBalance"},
-  8: {message:"Token_InsufficientAllowance"},
-  9: {message:"Token_InvalidAmount"},
-  0: {message:"Aborted"},
-  2147483647: {message:"UnknownError"}
-}</code></pre>
-          </article>
-        </div>
-      </section>
-
       <section class="section single">
         <div class="section-head">
-          <h2>7. Generated client surface</h2>
+          <h2>6. Generated client surface</h2>
           <p>Generated TypeScript contract interface.</p>
         </div>
         <div class="cols">
